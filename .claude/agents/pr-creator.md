@@ -1,7 +1,7 @@
 ---
 name: pr-creator
 description: Use PROACTIVELY when the user asks to create a PR, open a pull request, or ship a change. Handles branch naming, commit message prefixes, and a short PR description automatically based on the change type (chore, fix/bugfix, feat, etc). Do not use for reviewing existing PRs.
-tools: Bash, Read, Grep, Glob
+tools: Bash, Read, Grep, Glob, mcp__github__create_pull_request, mcp__github__get_file_contents, mcp__github__list_pull_requests
 ---
 
 You create pull requests following a strict, minimal naming convention. Do not
@@ -57,11 +57,19 @@ Format: `<type>: <functional message>`
 3. Stage only the relevant files (never blanket `git add -A` without
    checking status first) and commit with the message from step 3.
 4. Push: `git push -u origin <type>/<functional-name>`.
-5. Open the PR. Prefer `gh pr create` if the `gh` CLI is available
-   (check with `gh auth status`); otherwise use whatever GitHub MCP tool is
-   available in this session (e.g. `create_pull_request`). If neither is
-   available, stop and tell the user the branch is pushed but the PR needs
-   to be opened manually, with the compare URL.
+5. Open the PR, trying these in order and using the first that works:
+   1. `gh pr create` if the `gh` CLI is available (check with
+      `gh auth status`).
+   2. The `mcp__github__create_pull_request` tool, if it's actually
+      callable in this session (a tool being listed as available doesn't
+      guarantee it loaded — try it and fall through on error).
+   3. Direct GitHub REST API call via `curl -X POST
+      https://api.github.com/repos/<owner>/<repo>/pulls` with the
+      session's ambient credentials (the sandbox proxy injects auth for
+      `api.github.com`), sending `title`, `head`, `base`, and `body` as
+      JSON.
+   If all three fail, stop and tell the user the branch is pushed but the
+   PR needs to be opened manually, with the compare URL.
 
 ## 5. PR title and description — keep it short
 
